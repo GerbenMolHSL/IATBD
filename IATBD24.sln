@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IATBD24", "IATBD24\IATBD24.csproj", "{3DD8B32F-A603-41D7-902F-0D4E7B0E80D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IATWeb", "IATWeb\IATWeb.csproj", "{B5BE6FED-2ECA-476B-9AC4-340B9FAA03AE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3DD8B32F-A603-41D7-902F-0D4E7B0E80D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DD8B32F-A603-41D7-902F-0D4E7B0E80D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DD8B32F-A603-41D7-902F-0D4E7B0E80D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DD8B32F-A603-41D7-902F-0D4E7B0E80D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5BE6FED-2ECA-476B-9AC4-340B9FAA03AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5BE6FED-2ECA-476B-9AC4-340B9FAA03AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5BE6FED-2ECA-476B-9AC4-340B9FAA03AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5BE6FED-2ECA-476B-9AC4-340B9FAA03AE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
