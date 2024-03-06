@@ -35,6 +35,6 @@
     padding-right: 2rem;
 }
 
-.ui.form input {
+.ui.form input, .ui.form select {
     width: min(30rem, 100%) !important;
 }

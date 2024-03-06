@@ -25,4 +25,16 @@ public static class Helpers
             return stringBuilder.ToString();
         }
     }
+
+    public static bool KeyValuePairContains(string searchValue, params KeyValuePair<string, string>[] list)
+    {
+        foreach (KeyValuePair<string, string> pair in list)
+        {
+            if (pair.Key == searchValue)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -103,6 +103,58 @@ public static class RequestHandler
                     
                     WriteFooter();
                 }
+                else if (currentPath == "/mijndieren/submit")
+                {
+                    WriteHeader();
+
+                    MijnDieren.Submit();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijndieren/delete")
+                {
+                    WriteHeader();
+
+                    MijnDieren.Delete();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijnaanvragen")
+                {
+                    WriteHeader();
+                    
+                    MijnAanvragen.Create();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijnaanvragen/edit")
+                {
+                    WriteHeader();
+                    
+                    MijnAanvragen.CreateEdit();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijnaanvragen/submit")
+                {
+                    WriteHeader();
+                
+                    MijnAanvragen.Submit();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijnaanvragen/delete")
+                {
+                    WriteHeader();
+                
+                    MijnAanvragen.Delete();
+                    
+                    WriteFooter();
+                }
+                else
+                {
+                    Thread.HTTPContext.Response.StatusCode = 404;
+                }
             }
             else
             {
