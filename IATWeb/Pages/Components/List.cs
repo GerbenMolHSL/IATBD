@@ -5,15 +5,23 @@ namespace IATWeb.Pages.Components;
 
 public static class List
 {
-    public static string Create(DataTable data, string editUrl, string deleteUrl, bool allowDelete, bool allowNew, Dictionary<string, string> columnTranslations, Dictionary<string, Type> columnTypes, Dictionary<string, ForeignKeyObject> foreignKeys, params string[] showItems)
+    public static string Create(DataTable data, string editUrl, string deleteUrl, bool allowDelete, bool allowNew, Dictionary<string, string> columnTranslations, Dictionary<string, Type> columnTypes, Dictionary<string, ForeignKeyObject> foreignKeys, string customButtons, params string[] showItems)
     {
         string list = "";
         
         // Back button with icon
-        list += "<a href=\"" + editUrl + "\" class=\"ui labeled icon button primary\">";
-        list += "<i class=\"plus icon\"></i>";
-        list += "New";
-        list += "</a>";
+        if (allowNew)
+        {
+            list += "<a href=\"" + editUrl + "\" class=\"ui labeled icon button primary\">";
+            list += "<i class=\"plus icon\"></i>";
+            list += "New";
+            list += "</a>";
+        }
+        
+        if (!string.IsNullOrEmpty(customButtons))
+        {
+            list += customButtons;
+        }
         
         list += "<table class=\"ui celled table\">";
         list += "<thead>";
@@ -314,7 +322,8 @@ public class ForeignKeyObject
 
     public string GetLabel(string pk)
     {
-        DataRow row = DataTable.Select($"{PrimaryKeyTable} = {pk}")[0];
+        if (string.IsNullOrEmpty(pk)) return "";
+        DataRow row = DataTable.Select($"{PrimaryKeyTable} = '{pk}'")[0];
         List<string> labelSplit = LabelGroup.Split(',').ToList();
         string label = "";
         foreach (string labelPart in labelSplit)

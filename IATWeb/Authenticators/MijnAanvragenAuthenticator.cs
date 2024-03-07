@@ -18,11 +18,11 @@ public class MijnAanvragenAuthenticator : Authenticator
     public override bool AuthenticatePost()
     {
         if (value == null) return true;
-        return SQL.Exists("Requests", column, value, ownerColumn, ownerValue);
+        return SQL.Exists("Requests", column, value, ownerColumn, ownerValue, "status", 0);
     }
     
     public override bool AuthenticateDelete()
     {
-        return SQL.Exists("Requests", column, value, ownerColumn, ownerValue);
+        return SQL.Exists("Requests", column, value, ownerColumn, ownerValue, "status", 0);
     }
 }

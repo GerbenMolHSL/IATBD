@@ -151,6 +151,22 @@ public static class RequestHandler
                     
                     WriteFooter();
                 }
+                else if (currentPath == "/vorigeoppassers")
+                {
+                    WriteHeader();
+                    
+                    VorigeOppassers.Create();
+                    
+                    WriteFooter();
+                }
+                else if (currentPath == "/mijnoppasgeschiedenis")
+                {
+                    WriteHeader();
+                    
+                    OppasGeschiedenis.Create();
+                    
+                    WriteFooter();
+                }
                 else
                 {
                     Thread.HTTPContext.Response.StatusCode = 404;

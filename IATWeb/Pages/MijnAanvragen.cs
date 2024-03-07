@@ -16,21 +16,50 @@ public static class MijnAanvragen
         
         Sidebar.Create("Mijn aanvragen");
         
-        DataTable data = SQL.DoSearch("Requests", "*", "owner", thread.Session.SessionData.user);
+        bool inAfwachtingFilter = thread.HTTPContext.Request.Query.ContainsKey("-status") && thread.HTTPContext.Request.Query["-status"].ToString() == "0";
+        bool goedgekeurdFilter = thread.HTTPContext.Request.Query.ContainsKey("-status") && thread.HTTPContext.Request.Query["-status"].ToString() == "1";
+        bool afgerondFilter = thread.HTTPContext.Request.Query.ContainsKey("-status") && thread.HTTPContext.Request.Query["-status"].ToString() == "2";
+        bool allowEdit = (thread.HTTPContext.Request.Query.ContainsKey("-status") && thread.HTTPContext.Request.Query["-status"].ToString() == "0") || !thread.HTTPContext.Request.Query.ContainsKey("-status");
+
+        string statusFilter = "0";
+        if (inAfwachtingFilter) statusFilter = "0";
+        if (goedgekeurdFilter) statusFilter = "1";
+        if (afgerondFilter) statusFilter = "2";
+
+        string extraField = null;
+        if (goedgekeurdFilter || afgerondFilter) extraField = "acceptedBy";
+        
+        DataTable data = SQL.DoSearch("Requests", "*", "owner", thread.Session.SessionData.user, "status", statusFilter);
         
         DataTable animalFK = SQL.DoSearch("Animals", "*", "owner", thread.Session.SessionData.user);
         
+        // String object with select <div class="field "><label for="pet">Huisdier</label><select data-required="True" name="pet" class="ui fluid search dropdown"><option value="4">Test</option><option value="5">Test2</option></select></div>
+        string status = BuildString.NewString(
+            "<div class=\"ui form\">",
+                        "<div class=\"field\">",
+            "<label for=\"pet\">Huisdier</label>",
+            "<select onchange=\"location.href='?-status='+event.target.value\" data-required=\"True\" name=\"pet\" class=\"ui fluid search dropdown\">",
+            $"<option {(inAfwachtingFilter ? "selected" : "")} value=\"0\">In afwachting</option>",
+            $"<option {(goedgekeurdFilter ? "selected" : "")} value=\"1\">Goedgekeurd</option>",
+            $"<option {(afgerondFilter ? "selected" : "")} value=\"2\">Afgerond</option>",
+            "</select>",
+            "</div>",
+            "</div>"
+        );
+        
+        
         response.WriteAsync(BuildString.NewString("<div id=\"content\">",
-            List.Create(data, "/mijnaanvragen/edit", "/mijnaanvragen/delete", true, true, new Dictionary<string, string>()
+            List.Create(data, allowEdit ? "/mijnaanvragen/edit" : "", "/mijnaanvragen/delete", allowEdit, allowEdit, new Dictionary<string, string>()
             {
                 {"name", "Naam"},
                 {"pet", "Huisdier"},
                 {"startdate", "Startdatum"},
-                {"enddate", "Einddatum"}
+                {"enddate", "Einddatum"},
+                {"acceptedBy", "Geaccepteerd door"}
             },new Dictionary<string, Type>(),new Dictionary<string, ForeignKeyObject>()
             {
                 {"pet", new ForeignKeyObject(animalFK, "id", "name")}
-            },"name", "pet", "startdate", "enddate"),
+            },status, "name", "pet", "startdate", "enddate", extraField),
             "</div>"
         ));
     }
@@ -52,7 +81,13 @@ public static class MijnAanvragen
         
         Sidebar.Create("Mijn aanvragen");
         
-        DataRow data = SQL.Get("Requests", "*", "id", thread.HTTPContext.Request.Query["id"]);
+        DataRow data = SQL.Get("Requests", "*", "id", thread.HTTPContext.Request.Query["id"], "status", 0);
+
+        if (data == null && !string.IsNullOrEmpty(thread.HTTPContext.Request.Query["id"].ToString()))
+        {
+            NoAccess.InProgress("/mijnaanvragen", "Deze aanvraag is al goedgekeurd");
+            return;
+        }
         
         DataTable animalFK = SQL.DoSearch("Animals", "*", "owner", thread.Session.SessionData.user);
 

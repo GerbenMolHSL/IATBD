@@ -13,3 +13,11 @@ public enum AnimalTypes
     Knaagdier = 8,
     Overig = 9
 }
+
+// Request status with int as value
+public enum RequestStatus
+{
+    InAfwachting = 0,
+    Goedgekeurd = 1,
+    Afgerond = 2
+}
