@@ -58,7 +58,7 @@ public static class OppasGeschiedenis
             },new Dictionary<string, ForeignKeyObject>()
             {
                 {"pet", new ForeignKeyObject(animalFK, "id", "name")}
-            }, status, "pet", "startdate", "enddate"),
+            }, status, new(), "pet", "startdate", "enddate"),
             "</div>"
         ));
         

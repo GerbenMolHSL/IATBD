@@ -20,14 +20,14 @@ Users:
 
 Requests:
 
-| Field | Type          | Description                                                                                                             |
-|-------|---------------|-------------------------------------------------------------------------------------------------------------------------|
-| id    | int           | Primary Key                                                                                                             |
-| owner | nvarchar(255) | FK to Users                                                                                                             |
-| pet   | int           | FK to Animals                                                                                                           |
-| starttime | datetime | Start time of the request                                                                                               |
-| endtime | datetime | End time of the request                                                                                                 |
-| status | smallint | Status of the request<br> Statuses are <br> Aangevraagd = 0 <br> Goedgekeurd = 1 <br> Afgerond = 2|
+| Field | Type          | Description                                                                                                                 |
+|-------|---------------|-----------------------------------------------------------------------------------------------------------------------------|
+| id    | int           | Primary Key                                                                                                                 |
+| owner | nvarchar(255) | FK to Users                                                                                                                 |
+| pet   | int           | FK to Animals                                                                                                               |
+| starttime | datetime | Start time of the request                                                                                                   |
+| endtime | datetime | End time of the request                                                                                                     |
+| status | smallint | Status of the request<br> Statuses are <br> InAfwachting = 0 <br> Goedgekeurd = 1 <br> Afgerond = 2 <br> ActionRequired = 3 |
 
 Sessions
 

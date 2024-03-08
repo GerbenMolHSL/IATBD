@@ -97,6 +97,12 @@ public static class SQL
         DataTable dataTable = DoSearch(table, "*", whereClause);
         return dataTable.Rows.Count > 0;
     }
+    
+    public static int Count(string table, params object[] whereClause)
+    {
+        DataTable dataTable = DoSearch(table, "*", whereClause);
+        return dataTable.Rows.Count;
+    }
 
     public static void Insert(string table, params object[] values)
     {

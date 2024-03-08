@@ -19,5 +19,6 @@ public enum RequestStatus
 {
     InAfwachting = 0,
     Goedgekeurd = 1,
-    Afgerond = 2
+    Afgerond = 2,
+    ActionRequired = 3
 }

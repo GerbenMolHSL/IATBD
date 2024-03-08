@@ -32,7 +32,7 @@ public static class Statcard
     public static string GetString(string title, string value)
     {
         return BuildString.NewString(
-            "        <div style=\"padding: 1rem;\" class=\"eight wide mobile two wide tablet two wide computer column\">",
+            "        <div style=\"padding: 1rem;\" class=\"eight wide mobile four wide tablet three wide computer column\">",
             "<div class=\"stat-container\">",            
             $"    <div class=\"description\">{title}</div>",
             $"    <div class=\"stat\">{value}</div>",

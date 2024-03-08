@@ -5,7 +5,7 @@ namespace IATWeb.Pages.Components;
 
 public static class List
 {
-    public static string Create(DataTable data, string editUrl, string deleteUrl, bool allowDelete, bool allowNew, Dictionary<string, string> columnTranslations, Dictionary<string, Type> columnTypes, Dictionary<string, ForeignKeyObject> foreignKeys, string customButtons, params string[] showItems)
+    public static string Create(DataTable data, string editUrl, string deleteUrl, bool allowDelete, bool allowNew, Dictionary<string, string> columnTranslations, Dictionary<string, Type> columnTypes, Dictionary<string, ForeignKeyObject> foreignKeys, string customButtons, Dictionary<string, string> customRefButtons, params string[] showItems)
     {
         string list = "";
         
@@ -22,21 +22,28 @@ public static class List
         {
             list += customButtons;
         }
-        
+
+        list += "<br><div style=\"max-width:calc(100vw - 4rem); overflow-x: auto; margin-top: 1rem;\">";
         list += "<table class=\"ui celled table\">";
         list += "<thead>";
         list += "<tr>";
-        foreach (DataColumn column in data.Columns)
+        foreach (string column in showItems)
         {
-            if (showItems.Length == 0 || showItems.Contains(column.ColumnName))
-            {
-                string translatedColumn = columnTranslations.ContainsKey(column.ColumnName) ? columnTranslations[column.ColumnName] : column.ColumnName;
-                list += $"<th>{translatedColumn}</th>";
-            }
+            if(string.IsNullOrEmpty(column)) continue;
+            string translatedColumn = columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
+            list += $"<th>{translatedColumn}</th>";
         }
         
         if (!string.IsNullOrEmpty(editUrl)) list += "<th class=\"one wide\"></th>";
         if (allowDelete && !string.IsNullOrEmpty(editUrl)) list += "<th class=\"one wide\"></th>";
+        
+        if(customRefButtons != null && customRefButtons.Count > 0)
+        {
+            foreach (var customRefButton in customRefButtons)
+            {
+                list += $"<th class=\"one wide\"></th>";
+            }
+        }
 
         list += "</tr>";
         list += "</thead>";
@@ -44,39 +51,47 @@ public static class List
         foreach (DataRow row in data.Rows)
         {
             list += "<tr>";
-            foreach (DataColumn column in data.Columns)
+            foreach (string column in showItems)
             {
-                if (showItems.Length == 0 || showItems.Contains(column.ColumnName))
+                if(string.IsNullOrEmpty(column)) continue;
+                string value = row[column].ToString();
+                if (foreignKeys.ContainsKey(column))
                 {
-                    string value = row[column.ColumnName].ToString();
-                    if (foreignKeys.ContainsKey(column.ColumnName))
+                    value = foreignKeys[column].GetLabel(value);
+                }
+                else if (columnTypes.ContainsKey(column))
+                {
+                    if(columnTypes[column].IsEnum)
+                        value = Enum.GetName(columnTypes[column], row[column]);
+                    else
                     {
-                        value = foreignKeys[column.ColumnName].GetLabel(value);
-                    }
-                    else if (columnTypes.ContainsKey(column.ColumnName))
-                    {
-                        if(columnTypes[column.ColumnName].IsEnum)
-                            value = Enum.GetName(columnTypes[column.ColumnName], row[column.ColumnName]);
-                        else
+                        switch (columnTypes[column])
                         {
-                            switch (columnTypes[column.ColumnName])
-                            {
-                                case Type decimalType when decimalType == typeof(decimal):
-                                    decimal.TryParse(row[column.ColumnName]?.ToString(), out decimal result);
-                                    value = result.ToString("F2", CultureInfo.InvariantCulture);
-                                    break;
-                            }
+                            case Type decimalType when decimalType == typeof(decimal):
+                                decimal.TryParse(row[column]?.ToString(), out decimal result);
+                                value = result.ToString("F2", CultureInfo.InvariantCulture);
+                                break;
                         }
                     }
-                    list += $"<td data-label=\"{column.ColumnName}\">{value}</td>";
                 }
+                list += $"<td data-label=\"{column}\">{value}</td>";
             }
             if (!string.IsNullOrEmpty(editUrl)) list += $"<td data-label=\"Edit\" class=\"center aligned\"><a href=\"{editUrl}?id={row["id"]}\"><i class=\"edit icon\"></i></a></td>";
             if (allowDelete && !string.IsNullOrEmpty(deleteUrl)) list += $"<td data-label=\"Delete\" class=\"center aligned\"><a data-confirm=\"Are you sure?\" data-method=\"delete\" onclick=\"handleDelete({row["id"]})\"><i class=\"trash icon red\"></i></a></td>";
+            
+            if(customRefButtons != null && customRefButtons.Count > 0)
+            {
+                foreach (var customRefButton in customRefButtons)
+                {
+                    list += $"<td data-label=\"{customRefButton.Key}\" class=\"center aligned\"><a href=\"{customRefButton.Value}?id={row["id"]}\"><i class=\"{customRefButton.Key}\"></i></a></td>";
+                }
+            }
+            
             list += "</tr>";
         }
         list += "</tbody>";
         list += "</table>";
+        list += "</div>";
         
         //Add javascript for the delete functionality if it's enabled
         if (allowDelete && !string.IsNullOrEmpty(editUrl))
@@ -154,77 +169,78 @@ public static class List
         if(!string.IsNullOrEmpty(pk)) edit += $"<input data-required=\"true\" type=\"hidden\" name=\"{pkColumnn}\" value=\"{pk}\">";
         if (data != null)
         {
-            foreach (DataColumn column in data.Table.Columns)
+            foreach (string column in showFields)
             {
-                if (showFields.Count == 0 || showFields.Contains(column.ColumnName))
+                if(string.IsNullOrEmpty(column)) continue;
+                if (showFields.Count == 0 || showFields.Contains(column))
                 {
-                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column.ColumnName, errors) ? "error" : "")}\">";
-                    string translatedColumn = columnTranslations.ContainsKey(column.ColumnName) ? columnTranslations[column.ColumnName] : column.ColumnName;
-                    edit += $"<label for=\"{column.ColumnName}\">{translatedColumn}</label>";
-                    bool required = requiredFields.Contains(column.ColumnName);
-                    if (foreignKeys != null && foreignKeys.ContainsKey(column.ColumnName))
+                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
+                    string translatedColumn = columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
+                    edit += $"<label for=\"{column}\">{translatedColumn}</label>";
+                    bool required = requiredFields.Contains(column);
+                    if (foreignKeys != null && foreignKeys.ContainsKey(column))
                     {
                         // Create a select from the foreign key
-                        ForeignKeyObject foreignKey = foreignKeys[column.ColumnName];
+                        ForeignKeyObject foreignKey = foreignKeys[column];
                         
-                        edit += $"<select data-required=\"{required}\" name=\"{column.ColumnName}\" class=\"ui fluid search dropdown\">";
+                        edit += $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
                         foreach (DataRow row in foreignKey.DataTable.Rows)
                         {
-                            bool selected = row[foreignKey.PrimaryKeyTable].ToString().Equals(data[column.ColumnName].ToString());
+                            bool selected = row[foreignKey.PrimaryKeyTable].ToString().Equals(data[column].ToString());
                             edit += $"<option {(selected ? "selected" : "")} value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
                         }
                         edit += "</select>";
                     }
-                    else if(columnTypes != null && columnTypes.ContainsKey(column.ColumnName))
+                    else if(columnTypes != null && columnTypes.ContainsKey(column))
                     {
-                        if (columnTypes[column.ColumnName].IsEnum)
+                        if (columnTypes[column].IsEnum)
                         {
-                            if (lockedFields.Contains(column.ColumnName))
+                            if (lockedFields.Contains(column))
                             {
-                                edit += $"<select data-required=\"{required}\" name=\"{column.ColumnName}\" value=\"{data[column.ColumnName]}\" class=\"ui fluid search dropdown\" disabled>";
+                                edit += $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\" disabled>";
                             }
                             else
                             {
-                                edit += $"<select data-required=\"{required}\" name=\"{column.ColumnName}\" value=\"{data[column.ColumnName]}\" class=\"ui fluid search dropdown\">";
+                                edit += $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\">";
                             }
                             // Make a select from provided enum each enum has a value so add the value and name to the select
-                            foreach (var value in Enum.GetValues(columnTypes[column.ColumnName]))
+                            foreach (var value in Enum.GetValues(columnTypes[column]))
                             {
-                                bool selected = ((int)value).ToString().Equals(data[column.ColumnName].ToString());
+                                bool selected = ((int)value).ToString().Equals(data[column].ToString());
                                 edit += $"<option {(selected ? "selected" : "")} value=\"{(int)value}\">{value}</option>";
                             }
                             edit += "</select>";   
                         }
 
-                        switch (columnTypes[column.ColumnName])
+                        switch (columnTypes[column])
                         {
                             case Type decimalType when decimalType == typeof(decimal):
-                                decimal.TryParse(data[column.ColumnName]?.ToString(), out decimal result);
+                                decimal.TryParse(data[column]?.ToString(), out decimal result);
                                 // Logic specific to handling decimal columns
-                                edit += $"<input type=\"number\" name=\"{column.ColumnName}\" value=\"{result.ToString("F2", CultureInfo.InvariantCulture)}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
+                                edit += $"<input type=\"number\" name=\"{column}\" value=\"{result.ToString("F2", CultureInfo.InvariantCulture)}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
                                 break;
                             case Type dateTimeType when dateTimeType == typeof(DateTime):
-                                if (!string.IsNullOrEmpty(data[column.ColumnName]?.ToString()))
+                                if (!string.IsNullOrEmpty(data[column]?.ToString()))
                                 {
-                                    DateTime.TryParse(data[column.ColumnName]?.ToString(), out DateTime resultDate);
-                                    edit += $"<input type=\"datetime-local\" name=\"{column.ColumnName}\" value=\"{resultDate.ToString("yyyy-MM-dd HH:mm:ss")}\">";
+                                    DateTime.TryParse(data[column]?.ToString(), out DateTime resultDate);
+                                    edit += $"<input type=\"datetime-local\" name=\"{column}\" value=\"{resultDate.ToString("yyyy-MM-dd HH:mm:ss")}\">";
                                 }
                                 else
                                 {
-                                    edit += $"<input type=\"datetime-local\" name=\"{column.ColumnName}\">";
+                                    edit += $"<input type=\"datetime-local\" name=\"{column}\">";
                                 }
                                 break;
                         }
                     }
                     else
                     {
-                        if (lockedFields.Contains(column.ColumnName))
+                        if (lockedFields.Contains(column))
                         {
-                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column.ColumnName}\" value=\"{data[column.ColumnName]}\" disabled>";
+                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\" disabled>";
                         }
                         else
                         {
-                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column.ColumnName}\" value=\"{data[column.ColumnName]}\">";
+                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\">";
                         }
                     }
                     edit += "</div>";
@@ -233,20 +249,21 @@ public static class List
         }
         else
         {
-            foreach (DataColumn column in columns)
+            foreach (string column in showFields)
             {
-                if (showFields.Count == 0 || showFields.Contains(column.ColumnName))
+                if(string.IsNullOrEmpty(column)) continue;
+                if (showFields.Count == 0 || showFields.Contains(column))
                 {
-                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column.ColumnName, errors) ? "error" : "")}\">";
-                    string translatedColumn = columnTranslations.ContainsKey(column.ColumnName) ? columnTranslations[column.ColumnName] : column.ColumnName;
-                    edit += $"<label for=\"{column.ColumnName}\">{translatedColumn}</label>";
-                    bool required = requiredFields.Contains(column.ColumnName);
-                    if (foreignKeys != null && foreignKeys.ContainsKey(column.ColumnName))
+                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
+                    string translatedColumn = columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
+                    edit += $"<label for=\"{column}\">{translatedColumn}</label>";
+                    bool required = requiredFields.Contains(column);
+                    if (foreignKeys != null && foreignKeys.ContainsKey(column))
                     {
                         // Create a select from the foreign key
-                        ForeignKeyObject foreignKey = foreignKeys[column.ColumnName];
+                        ForeignKeyObject foreignKey = foreignKeys[column];
                         
-                        edit += $"<select data-required=\"{required}\" name=\"{column.ColumnName}\" class=\"ui fluid search dropdown\">";
+                        edit += $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
                         foreach (DataRow row in foreignKey.DataTable.Rows)
                         {
                             edit += $"<option value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
@@ -254,14 +271,14 @@ public static class List
                         edit += "</select>";
                     }
                     else
-                    if(columnTypes != null && columnTypes.ContainsKey(column.ColumnName))
+                    if(columnTypes != null && columnTypes.ContainsKey(column))
                     {
-                        if (columnTypes[column.ColumnName].IsEnum)
+                        if (columnTypes[column].IsEnum)
                         {
                             edit +=
-                                $"<select data-required=\"{required}\" name=\"{column.ColumnName}\" class=\"ui fluid search dropdown\">";
+                                $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
                             // Make a select from provided enum each enum has a value so add the value and name to the select
-                            foreach (var value in Enum.GetValues(columnTypes[column.ColumnName]))
+                            foreach (var value in Enum.GetValues(columnTypes[column]))
                             {
                                 edit += $"<option value=\"{(int)value}\">{value}</option>";
                             }
@@ -269,20 +286,20 @@ public static class List
                             edit += "</select>";
                         }
                         
-                        switch (columnTypes[column.ColumnName])
+                        switch (columnTypes[column])
                         {
                             case Type decimalType when decimalType == typeof(decimal):
                                 // Logic specific to handling decimal columns
-                                edit += $"<input data-required=\"{required}\" type=\"number\" name=\"{column.ColumnName}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
+                                edit += $"<input data-required=\"{required}\" type=\"number\" name=\"{column}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
                                 break;
                             case Type dateTimeType when dateTimeType == typeof(DateTime):
-                                edit += $"<input data-required=\"{required}\" type=\"datetime-local\" name=\"{column.ColumnName}\">";
+                                edit += $"<input data-required=\"{required}\" type=\"datetime-local\" name=\"{column}\">";
                                 break;
                         }
                     }
                     else
                     {
-                        edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column.ColumnName}\">";
+                        edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\">";
                     }
                     edit += "</div>";
                 }

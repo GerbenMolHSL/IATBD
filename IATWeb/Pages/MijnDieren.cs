@@ -29,7 +29,7 @@ public static class MijnDieren
             {
                 {"type", typeof(AnimalTypes)},
                 {"payment", typeof(decimal)}
-            },new Dictionary<string, ForeignKeyObject>(), "", "name", "owner", "type", "payment"),
+            },new Dictionary<string, ForeignKeyObject>(), "", new(), "name", "owner", "type", "payment"),
             "</div>"
         ));
         

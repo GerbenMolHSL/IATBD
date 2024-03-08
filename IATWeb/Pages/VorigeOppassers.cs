@@ -24,10 +24,12 @@ public static class VorigeOppassers
             {
                 {"id", "ID"},
                 {"owner", "Eigenaar"},
-                {"animal", "Dier"},
-                {"start", "Start"},
-                {"end", "Eind"},
-                {"status", "Status"}
+                {"pet", "Huisdier"},
+                {"status", "Status"},
+                {"acceptedBy", "Oppasser"},
+                {"startdate", "Startdatum"},
+                {"enddate", "Einddatum"},
+                {"expectedDuration", "Verwachte duur"}
             },new Dictionary<string, Type>()
             {
                 {"start", typeof(DateTime)},
@@ -37,7 +39,7 @@ public static class VorigeOppassers
             {
                 {"pet", new ForeignKeyObject(animalFK, "id", "name")},
                 {"acceptedBy", new ForeignKeyObject(userFK, "id", "name")}
-            }, "", "pet", "startdate", "enddate", "acceptedBy"),
+            }, "", new(), "pet", "startdate", "expectedDuration", "enddate", "acceptedBy"),
             "</div>"
         ));
         

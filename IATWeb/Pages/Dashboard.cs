@@ -17,23 +17,45 @@ public static class Dashboard
         {
             new StatObject()
             {
-                Title = "Users",
-                Value = "10",
+                Title = "Openstaande oppasverzoeken",
+                Value = SQL.Count("Requests", "status", "0", "owner", thread.Session.UserProfile.Username).ToString(),
             },
             new StatObject()
             {
-                Title = "Users",
-                Value = "10"
+                Title = "Aantal keer opgepast",
+                Value = SQL.Count("Requests", "status", "2", "acceptedBy", thread.Session.UserProfile.Username).ToString(),
             },
             new StatObject()
             {
-                Title = "Users",
-                Value = "10"
+                Title = "Aantal keer oppasverzoeken afgerond",
+                Value = SQL.Count("Requests", "status", "2", "owner", thread.Session.UserProfile.Username).ToString(),
             },
             new StatObject()
             {
-                Title = "Users",
-                Value = "10"
+                Title = "Totale oppasverzoeken",
+                Value = SQL.Count("Requests", "owner", thread.Session.UserProfile.Username).ToString(),
+            },
+        };
+        
+        List<ContentObject> content = new()
+        {
+            new ContentObject()
+            {
+                HTMLContent = List.Create(SQL.DoSearch("Requests", "*", "status", 0, "owner", thread.Session.UserProfile.Username), "", "", false, false, new Dictionary<string, string>()
+                {
+                    {"name", "Naam"},
+                    {"pet", "Huisdier"},
+                    {"startdate", "Startdatum"},
+                    {"enddate", "Einddatum"},
+                    {"acceptedBy", "Geaccepteerd door"}
+                }, new Dictionary<string, Type>(), new Dictionary<string, ForeignKeyObject>()
+                {
+                    {"pet", new ForeignKeyObject(SQL.DoSearch("Animals", "*", "owner", thread.Session.UserProfile.Username), "id", "name")}
+                }, "", new()
+                {
+                    {"icon check green",""},
+                    {"icon cancel red",""}
+                }, "pet", "startdate", "enddate", "acceptedBy"),
             },
         };
         
@@ -45,6 +67,7 @@ public static class Dashboard
             "        </div>",
             "    </div>",
             StatContainer.GetString(stats.ToArray()),
+            ContentContainer.GetString(content.ToArray()),
             "    </div>",
             "</div>"
             )

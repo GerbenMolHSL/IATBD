@@ -59,7 +59,7 @@ public static class MijnAanvragen
             },new Dictionary<string, Type>(),new Dictionary<string, ForeignKeyObject>()
             {
                 {"pet", new ForeignKeyObject(animalFK, "id", "name")}
-            },status, "name", "pet", "startdate", "enddate", extraField),
+            },status, new(), "pet", "startdate", "enddate", extraField),
             "</div>"
         ));
     }
