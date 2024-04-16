@@ -16,7 +16,7 @@ public static class MijnDieren
         
         Sidebar.Create("Mijn dieren");
 
-        DataTable data = SQL.DoSearch("Animals", "*", "owner", thread.Session.SessionData.user);
+        DataTable data = SQL.DoSearch("Animals", "*", "owner", thread.Session.SessionData.user, "active", true);
 
         response.WriteAsync(BuildString.NewString("<div id=\"content\">",
             List.Create(data, "/mijndieren/edit", "/mijndieren/delete", true, true, new Dictionary<string, string>()
@@ -58,15 +58,19 @@ public static class MijnDieren
         DataRow data = SQL.Get("Animals", "*", "id", thread.HTTPContext.Request.Query["id"]);
 
         response.WriteAsync(BuildString.NewString("<div id=\"content\">",
-            List.CreateEdit(data, "Animals", thread.HTTPContext.Request.Query["id"], "submit", "/mijndieren",new() { "name", "type", "payment" }, new(){ "id" }, new(){ "name", "type", "payment" }, new Dictionary<string, string>()
+            List.CreateEdit(data, "Animals", thread.HTTPContext.Request.Query["id"], "submit", "/mijndieren",new() { "name", "type", "payment" }, new(){ "id" }, new(){ "name", "type", "payment", "Doc", "notes" }, new Dictionary<string, string>()
             {
                 {"name", "Naam"},
                 {"type", "Soort"},
-                {"payment", "Uurprijs"}
+                {"payment", "Uurprijs"},
+                {"Doc", "Foto's"},
+                {"notes", "Notities"}
             },new Dictionary<string, Type>()
             {
                 {"type", typeof(AnimalTypes)},
-                {"payment", typeof(decimal)}
+                {"payment", typeof(decimal)},
+                {"Doc", typeof(File)},
+                {"notes", typeof(TextArea)}
             }, null, errors),
             "</div>"
             )
@@ -96,9 +100,9 @@ public static class MijnDieren
         thread.HTTPContext.Request.Form = formCollection;
         
         string id = thread.HTTPContext.Request.Form["id"];
-        if (string.IsNullOrEmpty(id)) id = SQL.GetNewID("Requests");
+        if (string.IsNullOrEmpty(id)) id = SQL.GetNewID("Animals");
         
-        if (SQL.InsertOrUpdateForm("Animals", authenticator, out KeyValuePair<string, string>[] errors, "name","owner","type","payment"))
+        if (SQL.InsertOrUpdateForm("Animals", true, authenticator, out KeyValuePair<string, string>[] errors, null, new List<string>(){"name","owner","type","payment"}, "name","owner","type","payment","Doc","notes"))
         {
             thread.HTTPContext.Response.WriteAsync(BuildString.NewString("<script>",$"window.location.replace(\"edit?id={id}\");","</script>"));
         }
@@ -111,12 +115,22 @@ public static class MijnDieren
     public static void Delete()
     {
         WebThread thread = ThreadConfig.GetWebThread();
-        thread.Session.LoadSessionData();
+        thread.Session.GetUserData();
         
         MijnDierenAuthenticator authenticator = new MijnDierenAuthenticator("id", thread.HTTPContext.Request.Query["id"], "owner", thread.Session.SessionData.user);
-        
-        if (SQL.Delete("Animals", authenticator, "id", thread.HTTPContext.Request.Query["id"]))
+
+
+        if (thread.Session.UserProfile.IsAdmin && thread.HTTPContext.Request.Path.ToString().StartsWith("/admin"))
         {
+            SQL.Delete("Animals", authenticator, "id", thread.HTTPContext.Request.Query["id"]);
+        }
+        else if (authenticator.AuthenticatePost())
+        {
+            List<object> data = new()
+            {
+                "active", false
+            };
+            SQL.Update("Animals", data.ToArray(), "id", thread.HTTPContext.Request.Query["id"]);
             thread.HTTPContext.Response.WriteAsync(BuildString.NewString("<script>",$"window.location.replace(\"/mijndieren\");","</script>"));
         }
         else

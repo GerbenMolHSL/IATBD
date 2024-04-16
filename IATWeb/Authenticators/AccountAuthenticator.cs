@@ -1,0 +1,28 @@
+﻿namespace IATWeb.Authenticators;
+
+public class AccountAuthenticator : Authenticator
+{
+    public AccountAuthenticator(string column, string value, string ownerColumn, string ownerValue)
+    {
+        this.column = column;
+        this.value = value;
+        this.ownerColumn = ownerColumn;
+        this.ownerValue = ownerValue;
+    }
+    
+    public override bool AuthenticateGet()
+    {
+        return false;
+    }
+    
+    public override bool AuthenticatePost()
+    {
+        if (value == null) return true;
+        return SQL.Exists("Users", column, value, ownerColumn, ownerValue);
+    }
+    
+    public override bool AuthenticateDelete()
+    {
+        return false;
+    }
+}

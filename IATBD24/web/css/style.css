@@ -39,3 +39,53 @@
     width: min(30rem, 100%) !important;
 }
 
+.FileUpload {
+    width: min(30rem, 100%) !important;
+}
+
+.FileUpload .content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: white;
+    border-radius: .28571429rem;
+}
+
+.FileUpload .disabled-text {
+    width: 100%;
+    margin-right: 10px;
+    text-align: left;
+}
+
+.FileUpload .buttons {
+    display: flex;
+}
+
+.FileUpload .btn {
+    margin-left: 5px;
+    border: unset;
+    color: dodgerblue;
+    background: unset;
+}
+
+.FileUpload .btn:hover {
+    cursor: pointer;
+}
+
+.FileSelect .files {
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.FileSelect .file {
+    display: flex;
+    align-items: center;
+}
+
+.FileSelect .field {
+    margin: 0px 0.5rem 0rem 0px!important;
+    line-height: unset;
+}
+
+/* You may need to adjust button styles based on your design */

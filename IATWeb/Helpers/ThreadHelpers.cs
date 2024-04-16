@@ -8,9 +8,17 @@ public static class ThreadConfig
 {
     public static IHttpContextAccessor HttpContextAccessor;
 
+    private static Dictionary<HttpContext, WebThread> _threads = new();
+
     public static WebThread GetWebThread()
     {
-        return new WebThread(HttpContextAccessor.HttpContext);
+        if(_threads.ContainsKey(HttpContextAccessor.HttpContext))
+        {
+            return _threads[HttpContextAccessor.HttpContext];
+        }
+        WebThread thread = new WebThread(HttpContextAccessor.HttpContext);
+        _threads.Add(HttpContextAccessor.HttpContext, thread);
+        return thread;
     }
 }
 
@@ -56,12 +64,34 @@ public class Session
         bool blnReturn = false;
         if (SessionID != null)
         {
-            blnReturn = SQL.Exists("Sessions", "session", SessionID);
+            DataRow sessionRow = SQL.Get("Sessions", "session,user", "session", SessionID);
+            blnReturn = sessionRow != null;
+
+            if (blnReturn)
+            {
+                blnReturn = SQL.Exists("Users", "id", sessionRow["user"].ToString(), "active", true);
+            }
         }
 
         IsValid = blnReturn;
         _sessionChecked = true;
 
+        return blnReturn;
+    }
+
+    public bool CheckInactive()
+    {
+        bool blnReturn = true;
+
+        if (SessionID != null)
+        {
+            DataRow sessionRow = SQL.Get("Sessions", "session,user", "session", SessionID);
+            if (sessionRow != null)
+            {
+                blnReturn = SQL.Exists("Users", "id", sessionRow["user"].ToString(), "active", false);
+            }
+        }
+        
         return blnReturn;
     }
 
@@ -72,8 +102,9 @@ public class Session
         {
             UserProfile = new UserProfile();
             
-            DataRow userProfileData = SQL.Get("Users", "id,name", "id",SessionData.user);
+            DataRow userProfileData = SQL.Get("Users", "id,name,isAdmin", "id",SessionData.user);
             UserProfile.Username = userProfileData["name"].ToString();
+            if(userProfileData["isAdmin"].GetType() != typeof(DBNull))UserProfile.IsAdmin = Convert.ToBoolean(userProfileData["isAdmin"]);
         }
     }
 
@@ -103,4 +134,5 @@ public class SessionData
 public class UserProfile
 {
     public string Username { get; set; }
+    public bool IsAdmin { get; set; }
 }

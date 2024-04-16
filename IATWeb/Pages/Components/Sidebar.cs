@@ -28,14 +28,23 @@ public static class Sidebar
                 $"      {header}",
                 "    </div>",
                 "    <div class=\"right menu\">",
-                "      <div class=\"vertically fitted borderless item\">",
-                "        <a href=\"/logout\" class=\"icon item\">",
-                "          <i class=\"logout icon\"></i>",
-                "        </a>",
-                "      </div>",
+                "        <div id=\"menuDropdownItem\" class=\"ui dropdown item\">",
+                "          <i class=\"user icon\"></i>",
+                "          <div class=\"menu\">",
+                "            <a class=\"item\" href=\"/profile\">",
+                "              Profiel instellingen",
+                "            </a>",
+                "            <a class=\"item\" href=\"/logout\">",
+                "              Logout",
+                "            </a>",
+                "          </div>",
+                "        </div>",
                 "    </div>",
                 "  </div>",
-                "</div>"
+                "</div>",
+                "<script>",
+                "$(\"#menuDropdownItem\").dropdown(\"hide\")",
+                "</script>"
             )
         );
 
@@ -68,9 +77,26 @@ public static class Sidebar
 
     private static string GetMenuItems()
     {
+        WebThread webThread = ThreadConfig.GetWebThread();
+        webThread.Session.GetUserData();
+
+        string adminTabs = "";
+        
+        if(webThread.Session.UserProfile.IsAdmin)
+        {
+            adminTabs = BuildString.NewString(
+                "    <a class=\"item\" href=\"/admin\">",
+                "        Admin",
+                "    </a>"
+            );
+        }
+        
         return BuildString.NewString(
             "    <a class=\"item\" href=\"/\">",
             "        Home",
+            "    </a>",
+            "    <a class=\"item\" href=\"/aanvragen\">",
+            "        Bekijk aanvragen",
             "    </a>",
             "    <a class=\"item\" href=\"/mijndieren\">",
             "        Mijn dieren",
@@ -83,7 +109,18 @@ public static class Sidebar
             "    </a>",
             "    <a class=\"item\" href=\"/mijnoppasgeschiedenis\">",
             "        Mijn oppasgeschiedenis",
-            "    </a>"
+            "    </a>",
+            "    <a class=\"item\" href=\"/reviews\">",
+            "        Reviews",
+            "    </a>",
+            "    <a class=\"item\" href=\"/myreviews\">",
+            "        Mijn ratings",
+            "    </a>",
+            "    <a class=\"item\" href=\"/bestandsbeheer\">",
+            "        Bestands beheer",
+            "    </a>",
+            
+            adminTabs
         );
     }
 }

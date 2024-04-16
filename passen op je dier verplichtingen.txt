@@ -1,0 +1,22 @@
+passen op je dier verplichtingen:
+
+registratie, CHECK
+
+Profiel met: CHECK
+ - video's / foto's van je huis
+
+Dieren toevoegen met volgend profiel: CHECK
+ - wanneer
+ - uurtarief
+ - tijdschatting
+ - notities
+
+Dieren ter oppas aanbieden CHECK
+Kunnen filteren in dit scherm CHECK
+Profiel Kunnen bekijken van de dieren CHECK
+
+Reageren op aanvraag CHECK
+Dit kan geaccepteerd of geweigerd worden door eigenaar CHECK
+Eigenaar kan review plaatsen over oppasser
+
+Admins kunnen gebruikers blokkeren en oppasaanvragen verwijderen

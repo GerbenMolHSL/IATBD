@@ -20,10 +20,11 @@ public static class List
         
         if (!string.IsNullOrEmpty(customButtons))
         {
+            list += "<br>";
             list += customButtons;
         }
 
-        list += "<br><div style=\"max-width:calc(100vw - 4rem); overflow-x: auto; margin-top: 1rem;\">";
+        list += "<div style=\"max-width:calc(100vw - 4rem); overflow-x: auto; margin-top: 1rem;\">";
         list += "<table class=\"ui celled table\">";
         list += "<thead>";
         list += "<tr>";
@@ -71,6 +72,9 @@ public static class List
                                 decimal.TryParse(row[column]?.ToString(), out decimal result);
                                 value = result.ToString("F2", CultureInfo.InvariantCulture);
                                 break;
+                            case Type passwordType when passwordType == typeof(Password):
+                                value = "********";
+                                break;
                         }
                     }
                 }
@@ -83,7 +87,7 @@ public static class List
             {
                 foreach (var customRefButton in customRefButtons)
                 {
-                    list += $"<td data-label=\"{customRefButton.Key}\" class=\"center aligned\"><a href=\"{customRefButton.Value}?id={row["id"]}\"><i class=\"{customRefButton.Key}\"></i></a></td>";
+                    list += $"<td data-label=\"{customRefButton.Key}\" class=\"center aligned\"><a {(customRefButton.Value.Split("|").Length > 1 ? $"onclick=\"return confirm('{customRefButton.Value.Split("|").First()}')\"" : "")} href=\"{customRefButton.Value.Split("|").Last()}?id={row["id"]}\"><i class=\"{customRefButton.Key}\"></i></a></td>";
                 }
             }
             
@@ -128,197 +132,299 @@ public static class List
     public static string CreateEdit(DataRow data, string entty, string pk, string createUpdateUrl, string backUrl, List<string> requiredFields, List<string> lockedFields, List<string> showFields, Dictionary<string, string> columnTranslations, Dictionary<string, Type> columnTypes = null, Dictionary<string, ForeignKeyObject> foreignKeys = null, KeyValuePair<string, string>[] errors = null)
     {
         string edit = "";
-        
-        // Back button with icon
-        edit += "<a href=\"" + backUrl + "\" class=\"ui labeled icon button\">";
-        edit += "<i class=\"left arrow icon\"></i>";
-        edit += "Terug";
-        edit += "</a>";
-
-        edit += Errors.GenerateErrors(columnTranslations, errors);
-        
-        List<DataColumn> columns = SQL.GetColumns(entty);
-        
-        WebThread thread = ThreadConfig.GetWebThread();
-        if (thread.HTTPContext.Request.Method == "POST")
+        try
         {
-            // Create a DataTable with the desired structure
-            DataTable dataTable = new DataTable();
-            foreach (DataColumn column in columns)
+            // Back button with icon
+            if (!string.IsNullOrEmpty(backUrl))
             {
-                dataTable.Columns.Add(column);
+                edit += "<a href=\"" + backUrl + "\" class=\"ui labeled icon button\">";
+                edit += "<i class=\"left arrow icon\"></i>";
+                edit += "Terug";
+                edit += "</a>";
             }
 
-            // Create a new DataRow and populate it with form data
-            data = dataTable.NewRow();
-            foreach (DataColumn column in columns)
+            if (errors != null) edit += Errors.GenerateErrors(columnTranslations, errors);
+
+            List<DataColumn> columns = SQL.GetColumns(entty);
+
+            WebThread thread = ThreadConfig.GetWebThread();
+            if (thread.HTTPContext.Request.Method == "POST")
             {
-                // Check if the form contains data for the current column
-                if (!string.IsNullOrEmpty(thread.HTTPContext.Request.Form[column.ColumnName].ToString()))
+                // Create a DataTable with the desired structure
+                DataTable dataTable = new DataTable();
+                foreach (DataColumn column in columns)
                 {
-                    data[column] = thread.HTTPContext.Request.Form[column.ColumnName];
+                    try
+                    {
+                        dataTable.Columns.Add(column);
+                    }
+                    catch (Exception e)
+                    {
+                        // Ignore, assume the column is virtual and does not exist in db. EG: passwordRepeat, password
+                    }
+                }
+
+                // Add all showFields that dont exist these are virtual
+                foreach (string showField in showFields)
+                {
+                    bool foundColumn = false;
+                    foreach (DataColumn column in columns)
+                    {
+                        if (column.ColumnName.Equals(showField))
+                        {
+                            foundColumn = true;
+                            break;
+                        }
+                    }
+
+                    if (!foundColumn)
+                    {
+                        dataTable.Columns.Add(showField);
+                    }
+                }
+
+                // Create a new DataRow and populate it with form data
+                data = dataTable.NewRow();
+                foreach (DataColumn column in columns)
+                {
+                    // Check if the form contains data for the current column
+                    if (!string.IsNullOrEmpty(thread.HTTPContext.Request.Form[column.ColumnName].ToString()))
+                    {
+                        data[column] = thread.HTTPContext.Request.Form[column.ColumnName];
+                    }
                 }
             }
-        }
 
-        string pkColumnn = SQL.GetPrimaryKeyColumn(entty);
+            string pkColumnn = SQL.GetPrimaryKeyColumn(entty);
 
-        bool hasErrors = errors != null && errors.Length > 0;
-        
-        edit += $"<form id=\"{entty}-edit-{pk}\" class=\"ui form {(hasErrors ? "error" : "")}\" action=\"{createUpdateUrl}\" method=\"post\">";
-        if(!string.IsNullOrEmpty(pk)) edit += $"<input data-required=\"true\" type=\"hidden\" name=\"{pkColumnn}\" value=\"{pk}\">";
-        if (data != null)
-        {
-            foreach (string column in showFields)
+            bool hasErrors = errors != null && errors.Length > 0;
+            bool containsFiles = false;
+
+            string extension = "";
+            if (!string.IsNullOrEmpty(pk)) extension = $"?id={pk}";
+
+            edit +=
+                $"<form id=\"{entty}-edit-{pk}\" class=\"ui form {(hasErrors ? "error" : "")}\" action=\"{createUpdateUrl}{extension}\" method=\"post\">";
+            if (!string.IsNullOrEmpty(pk))
+                edit += $"<input data-required=\"true\" type=\"hidden\" name=\"{pkColumnn}\" value=\"{pk}\">";
+            if (data != null)
             {
-                if(string.IsNullOrEmpty(column)) continue;
-                if (showFields.Count == 0 || showFields.Contains(column))
+                foreach (string column in showFields)
                 {
-                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
-                    string translatedColumn = columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
-                    edit += $"<label for=\"{column}\">{translatedColumn}</label>";
-                    bool required = requiredFields.Contains(column);
-                    if (foreignKeys != null && foreignKeys.ContainsKey(column))
+                    if (string.IsNullOrEmpty(column)) continue;
+                    if (showFields.Count == 0 || showFields.Contains(column))
                     {
-                        // Create a select from the foreign key
-                        ForeignKeyObject foreignKey = foreignKeys[column];
-                        
-                        edit += $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
-                        foreach (DataRow row in foreignKey.DataTable.Rows)
+                        if(errors != null) edit +=
+                            $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
+                        else edit += "<div class=\"field\">";
+                        string translatedColumn =
+                            columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
+                        edit += $"<label for=\"{column}\">{translatedColumn}</label>";
+                        bool required = requiredFields.Contains(column);
+                        if (foreignKeys != null && foreignKeys.ContainsKey(column))
                         {
-                            bool selected = row[foreignKey.PrimaryKeyTable].ToString().Equals(data[column].ToString());
-                            edit += $"<option {(selected ? "selected" : "")} value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
-                        }
-                        edit += "</select>";
-                    }
-                    else if(columnTypes != null && columnTypes.ContainsKey(column))
-                    {
-                        if (columnTypes[column].IsEnum)
-                        {
-                            if (lockedFields.Contains(column))
-                            {
-                                edit += $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\" disabled>";
-                            }
-                            else
-                            {
-                                edit += $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\">";
-                            }
-                            // Make a select from provided enum each enum has a value so add the value and name to the select
-                            foreach (var value in Enum.GetValues(columnTypes[column]))
-                            {
-                                bool selected = ((int)value).ToString().Equals(data[column].ToString());
-                                edit += $"<option {(selected ? "selected" : "")} value=\"{(int)value}\">{value}</option>";
-                            }
-                            edit += "</select>";   
-                        }
+                            // Create a select from the foreign key
+                            ForeignKeyObject foreignKey = foreignKeys[column];
 
-                        switch (columnTypes[column])
-                        {
-                            case Type decimalType when decimalType == typeof(decimal):
-                                decimal.TryParse(data[column]?.ToString(), out decimal result);
-                                // Logic specific to handling decimal columns
-                                edit += $"<input type=\"number\" name=\"{column}\" value=\"{result.ToString("F2", CultureInfo.InvariantCulture)}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
-                                break;
-                            case Type dateTimeType when dateTimeType == typeof(DateTime):
-                                if (!string.IsNullOrEmpty(data[column]?.ToString()))
-                                {
-                                    DateTime.TryParse(data[column]?.ToString(), out DateTime resultDate);
-                                    edit += $"<input type=\"datetime-local\" name=\"{column}\" value=\"{resultDate.ToString("yyyy-MM-dd HH:mm:ss")}\">";
-                                }
-                                else
-                                {
-                                    edit += $"<input type=\"datetime-local\" name=\"{column}\">";
-                                }
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        if (lockedFields.Contains(column))
-                        {
-                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\" disabled>";
-                        }
-                        else
-                        {
-                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\">";
-                        }
-                    }
-                    edit += "</div>";
-                }
-            }
-        }
-        else
-        {
-            foreach (string column in showFields)
-            {
-                if(string.IsNullOrEmpty(column)) continue;
-                if (showFields.Count == 0 || showFields.Contains(column))
-                {
-                    edit += $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
-                    string translatedColumn = columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
-                    edit += $"<label for=\"{column}\">{translatedColumn}</label>";
-                    bool required = requiredFields.Contains(column);
-                    if (foreignKeys != null && foreignKeys.ContainsKey(column))
-                    {
-                        // Create a select from the foreign key
-                        ForeignKeyObject foreignKey = foreignKeys[column];
-                        
-                        edit += $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
-                        foreach (DataRow row in foreignKey.DataTable.Rows)
-                        {
-                            edit += $"<option value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
-                        }
-                        edit += "</select>";
-                    }
-                    else
-                    if(columnTypes != null && columnTypes.ContainsKey(column))
-                    {
-                        if (columnTypes[column].IsEnum)
-                        {
                             edit +=
                                 $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
-                            // Make a select from provided enum each enum has a value so add the value and name to the select
-                            foreach (var value in Enum.GetValues(columnTypes[column]))
+                            foreach (DataRow row in foreignKey.DataTable.Rows)
                             {
-                                edit += $"<option value=\"{(int)value}\">{value}</option>";
+                                bool selected = row[foreignKey.PrimaryKeyTable].ToString()
+                                    .Equals(data[column].ToString());
+                                edit +=
+                                    $"<option {(selected ? "selected" : "")} value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
                             }
 
                             edit += "</select>";
                         }
-                        
-                        switch (columnTypes[column])
+                        else if (columnTypes != null && columnTypes.ContainsKey(column))
                         {
-                            case Type decimalType when decimalType == typeof(decimal):
-                                // Logic specific to handling decimal columns
-                                edit += $"<input data-required=\"{required}\" type=\"number\" name=\"{column}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
-                                break;
-                            case Type dateTimeType when dateTimeType == typeof(DateTime):
-                                edit += $"<input data-required=\"{required}\" type=\"datetime-local\" name=\"{column}\">";
-                                break;
+                            if (columnTypes[column].IsEnum)
+                            {
+                                if (lockedFields.Contains(column))
+                                {
+                                    edit +=
+                                        $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\" disabled>";
+                                }
+                                else
+                                {
+                                    edit +=
+                                        $"<select data-required=\"{required}\" name=\"{column}\" value=\"{data[column]}\" class=\"ui fluid search dropdown\">";
+                                }
+
+                                // Make a select from provided enum each enum has a value so add the value and name to the select
+                                foreach (var value in Enum.GetValues(columnTypes[column]))
+                                {
+                                    bool selected = ((int)value).ToString().Equals(data[column].ToString());
+                                    edit +=
+                                        $"<option {(lockedFields.Contains(column) ? "disabled" : "")} {(selected ? "selected" : "")} value=\"{(int)value}\">{value}</option>";
+                                }
+
+                                edit += "</select>";
+                            }
+
+                            switch (columnTypes[column])
+                            {
+                                case Type decimalType when decimalType == typeof(decimal):
+                                    string value = data[column].ToString();
+                                    value = value.Replace(".", ",");
+                                    decimal.TryParse(value, out decimal result);
+                                    // Logic specific to handling decimal columns
+                                    edit +=
+                                        $"<input {(lockedFields.Contains(column) ? "disabled" : "")} type=\"number\" name=\"{column}\" value=\"{result.ToString("F2", CultureInfo.InvariantCulture)}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
+                                    break;
+                                case Type dateTimeType when dateTimeType == typeof(DateTime):
+                                    if (!string.IsNullOrEmpty(data[column]?.ToString()))
+                                    {
+                                        DateTime.TryParse(data[column]?.ToString(), out DateTime resultDate);
+                                        edit +=
+                                            $"<input {(lockedFields.Contains(column) ? "disabled" : "")} type=\"datetime-local\" name=\"{column}\" value=\"{resultDate.ToString("yyyy-MM-dd HH:mm:ss")}\">";
+                                    }
+                                    else
+                                    {
+                                        edit += $"<input {(lockedFields.Contains(column) ? "disabled" : "")} type=\"datetime-local\" name=\"{column}\">";
+                                    }
+
+                                    break;
+                                case Type passwordType when passwordType == typeof(Password):
+                                    edit += $"<input {(lockedFields.Contains(column) ? "disabled" : "")} type=\"password\" name=\"{column}\" value=\"{data[column]}\">";
+                                    break;
+                                case Type fileType when fileType == typeof(File):
+                                    edit += FileHandler.GetFileUpload(column, data[column].ToString(), lockedFields.Contains(column));
+                                    containsFiles = true;
+                                    break;
+                                case Type textAreaType when textAreaType == typeof(TextArea):
+                                    edit +=
+                                        $"<textarea {(lockedFields.Contains(column) ? "disabled" : "")} data-required=\"{required}\" name=\"{column}\">{data[column]}</textarea>";
+                                    break;
+                                case Type boolType when boolType == typeof(bool):
+                                    edit +=
+                                        $"<input {(lockedFields.Contains(column) ? "disabled" : "")} type=\"checkbox\" name=\"{column}\" value=\"true\" {(data[column].ToString().Equals("True") ? "checked" : "")}>";
+                                    break;
+                            }
                         }
+                        else
+                        {
+                            if (lockedFields.Contains(column))
+                            {
+                                edit +=
+                                    $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\" disabled>";
+                            }
+                            else
+                            {
+                                edit +=
+                                    $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\" value=\"{data[column]}\">";
+                            }
+                        }
+
+                        edit += "</div>";
                     }
-                    else
-                    {
-                        edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\">";
-                    }
-                    edit += "</div>";
                 }
             }
-        }
+            else
+            {
+                foreach (string column in showFields)
+                {
+                    if (string.IsNullOrEmpty(column)) continue;
+                    if (showFields.Count == 0 || showFields.Contains(column))
+                    {
+                        if(errors != null) edit +=
+                            $"<div class=\"field {(Helpers.KeyValuePairContains(column, errors) ? "error" : "")}\">";
+                        else edit += "<div class=\"field\">";
+                        string translatedColumn =
+                            columnTranslations.ContainsKey(column) ? columnTranslations[column] : column;
+                        edit += $"<label for=\"{column}\">{translatedColumn}</label>";
+                        bool required = requiredFields.Contains(column);
+                        if (foreignKeys != null && foreignKeys.ContainsKey(column))
+                        {
+                            // Create a select from the foreign key
+                            ForeignKeyObject foreignKey = foreignKeys[column];
 
-        edit += "<button class=\"ui primary button\" type=\"submit\">Opslaan</button>";
-        edit += $"<a class=\"ui negative button\" href={backUrl}>Annuleer</a>";
-        edit += "</form>";
-        
-        //Add javascript for the form validation
-        edit += "<script>";
-        edit += $"let form = document.getElementById('{entty}-edit-{pk}');";
-        edit += "form.addEventListener('submit', function(event) {";
-        edit += "    if (!validateForm(form)) {";
-        edit += "        event.preventDefault();"; // Prevent form submission
-        edit += "    }";
-        edit += "});";
-        edit += "</script>";
+                            edit +=
+                                $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
+                            foreach (DataRow row in foreignKey.DataTable.Rows)
+                            {
+                                edit +=
+                                    $"<option value=\"{row[foreignKey.PrimaryKeyTable]}\">{foreignKey.GetLabel(row[foreignKey.PrimaryKeyTable].ToString())}</option>";
+                            }
+
+                            edit += "</select>";
+                        }
+                        else if (columnTypes != null && columnTypes.ContainsKey(column))
+                        {
+                            if (columnTypes[column].IsEnum)
+                            {
+                                edit +=
+                                    $"<select data-required=\"{required}\" name=\"{column}\" class=\"ui fluid search dropdown\">";
+                                // Make a select from provided enum each enum has a value so add the value and name to the select
+                                foreach (var value in Enum.GetValues(columnTypes[column]))
+                                {
+                                    edit += $"<option value=\"{(int)value}\">{value}</option>";
+                                }
+
+                                edit += "</select>";
+                            }
+
+                            switch (columnTypes[column])
+                            {
+                                case Type decimalType when decimalType == typeof(decimal):
+                                    // Logic specific to handling decimal columns
+                                    edit +=
+                                        $"<input data-required=\"{required}\" type=\"number\" name=\"{column}\" step=\"0.01\" min=\"0.00\" placeholder=\"0.00\">";
+                                    break;
+                                case Type dateTimeType when dateTimeType == typeof(DateTime):
+                                    edit +=
+                                        $"<input data-required=\"{required}\" type=\"datetime-local\" name=\"{column}\">";
+                                    break;
+                                case Type passwordType when passwordType == typeof(Password):
+                                    edit += $"<input type=\"password\" name=\"{column}\"\">";
+                                    break;
+                                case Type fileType when fileType == typeof(File):
+                                    edit += FileHandler.GetFileUpload(column, null, false);
+                                    containsFiles = true;
+                                    break;
+                                case Type textAreaType when textAreaType == typeof(TextArea):
+                                    edit += $"<textarea data-required=\"{required}\" name=\"{column}\"></textarea>";
+                                    break;
+                                case Type boolType when boolType == typeof(bool):
+                                    edit += $"<input type=\"checkbox\" name=\"{column}\" value=\"true\">";
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            edit += $"<input data-required=\"{required}\" type=\"text\" name=\"{column}\">";
+                        }
+
+                        edit += "</div>";
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(createUpdateUrl)) edit += "<button class=\"ui primary button\" type=\"submit\">Opslaan</button>";
+            if (!string.IsNullOrEmpty(backUrl) && !string.IsNullOrEmpty(createUpdateUrl)) edit += $"<a class=\"ui negative button\" href={backUrl}>Annuleer</a>";
+            edit += "</form>";
+
+            if (containsFiles)
+            {
+                edit += FileHandler.generateViewFileDiv();
+            }
+
+            //Add javascript for the form validation
+            edit += "<script>";
+            edit += $"let form = document.getElementById('{entty}-edit-{pk}');";
+            edit += "form.addEventListener('submit', function(event) {";
+            edit += "    if (!validateForm(form)) {";
+            edit += "        event.preventDefault();"; // Prevent form submission
+            edit += "    }";
+            edit += "});";
+            edit += "</script>";
+        }
+        catch (Exception e)
+        {
+            throw new Exception(e.Message);
+        }
 
         return edit;
     }
@@ -340,15 +446,21 @@ public class ForeignKeyObject
     public string GetLabel(string pk)
     {
         if (string.IsNullOrEmpty(pk)) return "";
-        DataRow row = DataTable.Select($"{PrimaryKeyTable} = '{pk}'")[0];
-        List<string> labelSplit = LabelGroup.Split(',').ToList();
-        string label = "";
-        foreach (string labelPart in labelSplit)
+        try
         {
-            string part = labelPart.Trim();
-            label += row[part] + " ";
+            DataRow row = DataTable.Select($"{PrimaryKeyTable} = '{pk}'")[0];
+            List<string> labelSplit = LabelGroup.Split(',').ToList();
+            string label = "";
+            foreach (string labelPart in labelSplit)
+            {
+                string part = labelPart.Trim();
+                label += row[part] + " ";
+            }
+            return label.Trim();
         }
-        return label.Trim();
+        catch(Exception e){}
+
+        return pk;
     }
 }
 // <table class="ui celled table">
@@ -375,3 +487,8 @@ public class ForeignKeyObject
 //     </tr>
 //     </tbody>
 //     </table>
+
+
+public class TextArea
+{
+}
