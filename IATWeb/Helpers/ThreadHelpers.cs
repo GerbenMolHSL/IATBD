@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Data;
 
 namespace IATWeb;
@@ -8,17 +9,11 @@ public static class ThreadConfig
 {
     public static IHttpContextAccessor HttpContextAccessor;
 
-    private static Dictionary<HttpContext, WebThread> _threads = new();
+    private static ConcurrentDictionary<HttpContext, WebThread> _threads = new();
 
     public static WebThread GetWebThread()
     {
-        if(_threads.ContainsKey(HttpContextAccessor.HttpContext))
-        {
-            return _threads[HttpContextAccessor.HttpContext];
-        }
-        WebThread thread = new WebThread(HttpContextAccessor.HttpContext);
-        _threads.Add(HttpContextAccessor.HttpContext, thread);
-        return thread;
+        return _threads.GetOrAdd(HttpContextAccessor.HttpContext, context => new WebThread(context));
     }
 }
 

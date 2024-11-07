@@ -69,19 +69,18 @@ public static class RequestHandler
                 
                 string passwordEncrypted = Helpers.GenerateSHA256(password);
 
-                bool userExists = SQL.Exists("Users", $"id", username, "hshdPsswrd", passwordEncrypted);
-                bool userInActive = Thread.Session.CheckInactive();
+                bool userExists = SQL.Exists("Users", $"id", username, "hshdPsswrd", passwordEncrypted, "active", true);
                 
-                if(userExists && !userInActive)
+                if(userExists)
                 {
                     Guid sessionID = Thread.Session.GenerateSession(username);
                     Thread.HTTPContext.Response.Cookies.Append("shadowSessionIATBD", sessionID.ToString());
                     Thread.HTTPContext.Response.Redirect("/");
                 }
-                else if (userInActive && userExists)
-                {
-                    LoginPage.Create(username, "Jou account is gedeactiveerd. Neem contact op met de beheerder.");
-                }
+                //else if (userInActive && userExists)
+                //{
+                //    LoginPage.Create(username, "Jou account is gedeactiveerd. Neem contact op met de beheerder.");
+                //}
                 else
                 {
                     LoginPage.Create(username, "Incorrect username and/or password");
@@ -206,6 +205,30 @@ public static class RequestHandler
                     RequestHelpers.AcceptRequest();
                     
                     WriteFooter();
+                }
+                else if (currentPath == "/finishRequest")
+                {
+                    WriteHeader();
+
+                    FinishRequests.Create();
+                    
+                    WriteFooter();;
+                }
+                else if (currentPath == "/finishRequest/edit")
+                {
+                    WriteHeader();
+
+                    FinishRequests.CreateEdit(false);
+                    
+                    WriteFooter();;
+                }
+                else if (currentPath == "/finishRequest/submit")
+                {
+                    WriteHeader();
+
+                    FinishRequests.Submit(false);
+                    
+                    WriteFooter();;
                 }
                 else if (currentPath == "/denyRequest")
                 {

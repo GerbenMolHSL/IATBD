@@ -10,7 +10,7 @@ using System.Data.SqlClient;
 
 public static class SQL
 {
-    private static string _connectionString = "Integrated Security=SSPI;Persist Security Info=False;Initial Catalog=IATBD;Data Source=GerbenWerk";
+    private static string _connectionString = "Server=tcp:iatbd.database.windows.net,1433;Initial Catalog=IATBD24;Persist Security Info=False;User ID=IATBD;Password=HSLeiden123;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
     public static DataTable DoSearch(string table, string selectGroup, params object[] whereClause)
     {

@@ -14,6 +14,11 @@ namespace cmNG.core.web
             // Initialize CaseMaster NextGen
             try
             {
+                Task.Run(() =>
+                {
+                    // This will run every minute to check if 
+                });
+
                 // Set the desired culture explicitly
                 CultureInfo culture = new CultureInfo("nl-NL");
 

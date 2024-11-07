@@ -9,6 +9,12 @@ public class MijnAanvragenAuthenticator : Authenticator
         this.ownerColumn = ownerColumn;
         this.ownerValue = ownerValue;
     }
+
+    public bool AuthenticateAccept()
+    {
+        if(value == null) return true;
+        return SQL.Exists("Requests", ownerColumn, value, "status", 1);
+    }
     
     public override bool AuthenticateGet()
     {

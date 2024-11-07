@@ -146,6 +146,14 @@ public static class MijnAanvragen
         string id = thread.HTTPContext.Request.Form["id"];
         if (string.IsNullOrEmpty(id)) id = SQL.GetNewID("Requests");
         
+        // Calculate enddate and set this in the form
+        if (form.ContainsKey("startdate") && form.ContainsKey("expectedDuration"))
+        {
+            DateTime startDate = DateTime.Parse(form["startdate"]);
+            int expectedDuration = int.Parse(form["expectedDuration"]);
+            form["enddate"] = startDate.AddHours(expectedDuration).ToString();
+        }
+        
         if (SQL.InsertOrUpdateForm("Requests", true, authenticator, out KeyValuePair<string,string>[] errors,null, new(){"pet","owner","startdate","enddte","expectedDuration"},"pet","owner","startdate","enddate","expectedDuration"))
         {
             string strReturnUrl = $"window.location.replace(\"edit?id={id}\");";

@@ -26,7 +26,9 @@ public static class Reviews
             {
                 {"type", typeof(AnimalTypes)},
                 {"payment", typeof(decimal)}
-            },new Dictionary<string, ForeignKeyObject>(), "", new(), "pet","startdate", "enddate"),
+            },new Dictionary<string, ForeignKeyObject>(){
+                {"pet", new ForeignKeyObject(SQL.DoSearch("Animals", "id,name", "owner", thread.Session.SessionData.user), "id", "name")}
+            }, "", new(), "pet","startdate", "enddate"),
             "</div>"
         ));
         

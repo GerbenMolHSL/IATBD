@@ -76,8 +76,7 @@ public static class Dashboard
                 }, "", new()
                 {
                     {"icon check green","Weet u zeker dat u deze aanvraag wilt accepteren?|acceptRequest"},
-                    {"icon cancel red","Weet u zeker dat u deze aanvraag wilt weigeren?|denyRequest"},
-                    {"icon user blue", "showProfile"}
+                    {"icon cancel red","Weet u zeker dat u deze aanvraag wilt weigeren?|denyRequest"}
                 }, "pet", "startdate", "enddate", "acceptedBy"),
                 Title = "Mijn aanvragen",
             },

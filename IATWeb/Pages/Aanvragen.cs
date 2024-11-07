@@ -32,6 +32,8 @@ public static class Aanvragen
         }
         
         DataTable data = SQL.DoSearch("Requests", "*", whereClause.ToArray());
+
+        data.Select();
         
         // Date select met zoek knop
         string status = BuildString.NewString(
